@@ -1,0 +1,59 @@
+﻿python : C:\Users\jm\anaconda3\Lib\site-packages\pandas\core\computation\expressions.py:23: UserWarning: Pandas require
+s version '2.10.2' or newer of 'numexpr' (version '2.10.1' currently installed).
+At line:15 char:3429
++ ... _fm_time" ; python -u src/downstream_omics.py --features "results_vit ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (C:\Users\jm\ana...tly installed).:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  from pandas.core.computation.check import NUMEXPR_INSTALLED
+[config] 找到 TCGA WSI: F:\ai_paper\experiment2_fm_time\data\raw\TCGA\svs  (130 .svs)
+
+======================================================================
+[downstream_omics] features=results_vitl14_jbi\all_features_omics_aligned.csv cohort=ALL seed=2026
+======================================================================
+[robust_read] luad_proteomics.csv: (213, 13303), dup=0
+[robust_read] lusc_proteomics.csv: (212, 13715), dup=0
+[robust_read] luad_clinical.csv: (111, 122), dup=3
+[robust_read] lusc_clinical.csv: (110, 122), dup=3
+[robust_read] luad_somatic_mutation.csv: (33108, 125), dup=0
+[robust_read] lusc_somatic_mutation.csv: (31343, 125), dup=0
+[robust_read] patient_roster.csv: (224, 8), dup=0
+[omics] 加载完成: ['proteomics', 'clinical', 'somatic_mutation', 'roster']
+  proteomics: (425, 14432), patient_id head: ['11LU013', '11LU016', '11LU022']
+  clinical: (221, 123), patient_id head: ['11LU013', '11LU016', '11LU022']
+  somatic_mutation: (64451, 128), patient_id head: ['11LU013', '11LU013', '11LU013']
+  roster: (224, 8), patient_id head: ['11LU013', '11LU016', '11LU022']
+[ID unify] numeric IDs: ['11LU013', '11LU016', '11LU022', '11LU035']
+[ID unify] C3L-/C3N- IDs: 220
+[features] all_features_omics_aligned.csv: (203, 239)
+[merge] features n=203, omics case_id 类型多样, 各表独立 inner join
+[covariates] clinical 覆盖 203/203 case_id
+[covariates] 可用协变量: ['age', 'sex', 'stage_path', 'pack'], 非空率: {'age': 1.0, 'sex': 1.0, 'stage_path': 0.0, 'pack': 0.537}
+[残差化] 协变量对形态特征的解释量: mean=0.084, 有解释力的特征数=227
+
+──────────────────────────────────────────────────────────────────────
+[proteomics] 交集 203 / 203
+──────────────────────────────────────────────────────────────────────
+[proteomics] target 总数 14430, 高方差筛选 50
+  [50/50] pearson=0.033  n=107  预估剩余 0.0 min
+[proteomics] BH-FDR q<0.05 显著: 25/50
+  Top 5:
+    SETD3                                     pearson=0.385  q=0.0000  n=193
+    HBG1                                      pearson=0.303  q=0.0000  n=158
+    DKK4                                      pearson=0.245  q=0.0000  n=151
+    LCE3E                                     pearson=0.210  q=0.0000  n=65
+    PAEP                                      pearson=0.197  q=0.0000  n=141
+[proteomics] 结果 → results_vitl14_jbi\local_smoke\ALL_proteomics_results.csv
+  特征重要性 top 5: ['f145', 'f96', 'f112', 'f155', 'f100']
+
+[OS Cox] C-index = nan ± nan
+
+======================================================================
+[最终汇总] 模态 1, 所有 target 50, BH-FDR q<0.05 显著 25
+[Top hits by modality:
+  [proteomics        ] SETD3                                    r=0.385 q=0.0000 n=193
+  [proteomics        ] HBG1                                     r=0.303 q=0.0000 n=158
+  [proteomics        ] DKK4                                     r=0.245 q=0.0000 n=151
+[summary] → results_vitl14_jbi\local_smoke\ALL_all_modalities_summary.csv
+======================================================================

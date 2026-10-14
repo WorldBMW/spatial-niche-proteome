@@ -1,0 +1,59 @@
+# ---- Data (too large for Git; see README for sources) ----
+data/
+*.npy
+*.pkl
+*.svs
+*.tif
+*.tiff
+*.ndpi
+*.mrxs
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# ---- Legacy experiment outputs (superseded by results_vitl14_jbi*) ----
+results/
+results_vitl14/
+results_vitl14_cptac/
+results_vitl14_cptac_full/
+logs_rerun2.log
+
+# ---- Manuscript drafts (pre-submission confidentiality) ----
+papers/
+
+# ---- Server access / credentials ----
+_sftp_helper.py
+scripts/_upload_downstream.py
+scripts/_start_screen_frozen.py
+scripts/_pull_frozen.py
+scripts/_check_server_env.py
+scripts/_check_frozen.py
+*.env
+credentials*
+
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+*.egg-info/
+.venv/
+venv/
+
+# ---- Logs & temp ----
+logs/
+logs_*.log
+*.log
+nohup.out
+*_cache/
+.cache/
+
+# ---- OS ----
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ---- IDE ----
+.vscode/
+.idea/
