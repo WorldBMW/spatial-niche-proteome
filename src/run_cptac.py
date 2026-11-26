@@ -54,9 +54,10 @@ def _dirs(backbone: str, tag: str):
 
 
 # ---------------- Step 1: embed ----------------
-def step_embed(backbone, tag, limit, max_patches, force):
+def step_embed(backbone, tag, limit, max_patches, force, wsi_dir=None):
     embed_dir, _, _ = _dirs(backbone, tag)
-    wsi_files = sorted(config.CPTAC_WSI_DIR.glob("*.svs"))
+    wdir = Path(wsi_dir) if wsi_dir else config.CPTAC_WSI_DIR
+    wsi_files = sorted(wdir.glob("*.svs"))
     if limit:
         wsi_files = wsi_files[:limit]
     print(f"[embed] {len(wsi_files)} WSI  max_patches={max_patches}  -> {embed_dir}")
@@ -196,6 +197,8 @@ def main():
                     help="TCGA 拟合的 kmeans pkl; 不给则在 CPTAC 上自拟合")
     ap.add_argument("--embed-tag", type=str, default=None,
                     help="niche 步复用的嵌入目录 tag (默认与 --tag 相同)")
+    ap.add_argument("--wsi-dir", type=str, default=None,
+                    help="WSI 目录覆盖 (默认 config.CPTAC_WSI_DIR; PDA 用 wsi_pda)")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
@@ -203,7 +206,8 @@ def main():
     for s in steps:
         print(f"\n{'='*70}\n[CPTAC step: {s}] backbone={args.backbone} tag={args.tag}\n{'='*70}")
         if s == "embed":
-            step_embed(args.backbone, args.tag, args.limit, args.max_patches, args.force)
+            step_embed(args.backbone, args.tag, args.limit, args.max_patches, args.force,
+                       wsi_dir=args.wsi_dir)
         elif s == "niche":
             step_niche(args.backbone, args.tag, args.frozen_kmeans, args.force,
                        embed_tag=args.embed_tag)

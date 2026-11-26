@@ -1,0 +1,70 @@
+﻿[config] 找到 TCGA WSI: G:\ai_paper\experiment2_fm_time\data\raw\TCGA\svs  (130 .svs)
+[targets] 9 个: ['TMB_high', 'ALK', 'BRAF', 'EGFR', 'KEAP1', 'KRAS', 'MET', 'PIK3CA', 'TP53']
+
+============================================================
+[Backbone] dinov2_vitl14
+============================================================
+[embed] 加载缓存: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_dinov2_vitl14.npz
+
+--- dinov2_vitl14 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  无有效 target
+
+--- dinov2_vitl14 seed=2027 ---
+[kmeans seed=2027] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  无有效 target
+
+--- dinov2_vitl14 seed=2028 ---
+[kmeans seed=2028] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  无有效 target
+
+============================================================
+[Backbone] resnet50
+============================================================
+  [weight] 从本地加载: G:\ai_paper\experiment2_fm_time\data\weights\torch\resnet50-11ad3fa6.pth
+  [patch_embed] dev=cuda  params=23.5M
+[embed] resnet50: 147 WSI, device=cuda, embed_dim=2048
+  [20/147] 1ccd29c1-cf30-4701-9b50-5d34cae2f4b3 (75, 2048), elapsed=19s
+  [40/147] 349e01b0-0c88-4321-839e-0a84edf11a73 (256, 2048), elapsed=41s
+  [60/147] 531d1248-76ae-46a1-8f65-cdecf9bcb0d8 (102, 2048), elapsed=63s
+  [80/147] 7e691df8-8ea6-472c-86bf-504c7ba6983d (165, 2048), elapsed=86s
+  [100/147] a355bad1-bb49-4de5-892b-691ed0022d91 (158, 2048), elapsed=109s
+  [120/147] cb6065de-0fc2-40e6-9609-179dfc54943f (256, 2048), elapsed=129s
+  [140/147] eeab558b-8d1e-4843-861d-dbfb06061758 (234, 2048), elapsed=153s
+[embed] 完成: 147 WSI, 缓存到 G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_resnet50.npz, 耗时 178s
+
+--- resnet50 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  无有效 target
+
+--- resnet50 seed=2027 ---
+[kmeans seed=2027] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  无有效 target
+
+--- resnet50 seed=2028 ---
+[kmeans seed=2028] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  无有效 target
+python : Traceback (most recent call last):
+At line:15 char:3344
++ ... t2_fm_time; python scripts/dict_encoder_sensitivity.py --backbones di ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "G:\ai_paper\experiment2_fm_time\scripts\dict_encoder_sensitivity.py", line 267, in <module>
+    main()
+  File "G:\ai_paper\experiment2_fm_time\scripts\dict_encoder_sensitivity.py", line 256, in main
+    pivot = summary.groupby(["backbone", "seed"])["significant"].sum().reset_index()
+  File "C:\Users\_bmw\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\groupby\generic.py", line 1
+951, in __getitem__
+    return super().__getitem__(key)
+  File "C:\Users\_bmw\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\base.py", line 245, in __ge
+titem__
+    raise KeyError(f"Column not found: {key}")
+KeyError: 'Column not found: significant'

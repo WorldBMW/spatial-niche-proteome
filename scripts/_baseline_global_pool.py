@@ -2,15 +2,22 @@
 baseline: DINOv2 全局池化 slide embedding (不做生态位分解)
 对 proteomics top2000 跑同款 nested-CV ElasticNet 关联
 输出: results_vitl14_jbi/dn_baseline_globalpool/ALL_proteomics_results.csv
+2026-10-17: 加 --adjust-subtype (与 downstream_omics CLI 同源逻辑) + --out 参数
 """
-import sys, os, glob, numpy as np
+import sys, os, glob, argparse, numpy as np
 sys.path.insert(0, "src")
 from downstream_omics import (load_cptac_omics, unify_patient_ids,
                               build_covariates, run_modality, load_morphology_features)
 
+ap = argparse.ArgumentParser()
+ap.add_argument("--out", default="results_vitl14_jbi_r3/dn_baseline_globalpool/ALL_proteomics_results.csv")
+ap.add_argument("--adjust-subtype", action="store_true",
+                help="加入 LUAD/LUSC 亚型协变量 (2026-10-17 新增, 此前从未真正调整过)")
+args = ap.parse_args()
+OUT = args.out
+
 EMB_DIR = "data/processed/dinov2_vitl14_embeddings_cptac"
 FEAT_CSV = "data/features/dinov2_vitl14_features_cptac/all_features_omics_aligned.csv"
-OUT = "results_vitl14_jbi/dn_baseline_globalpool/ALL_proteomics_results.csv"
 
 # 1) mean-pool per WSI
 files = sorted(glob.glob(os.path.join(EMB_DIR, "*.npy")))
@@ -64,6 +71,18 @@ else:
     cov_m = cov.values if cov is not None else None
 
 print(f"[baseline] aligned X: {Xm.shape}, omics: {om_df.shape}", flush=True)
+
+# ---- subtype 协变量 (2026-10-17: 与 downstream_omics.py CLI L1027 同源逻辑) ----
+if args.adjust_subtype and "cohort" in feat.columns:
+    sub = (feat.set_index("case_id")["cohort"].astype(str).str.lower()
+           .map({"luad": 0.0, "lusc": 1.0}).rename("subtype"))
+    cov = cov.join(sub, how="left")
+    print(f"[baseline] subtype (LUAD=0/LUSC=1) 加入协变量: 非空 "
+          f"{int(cov['subtype'].notna().sum())}/{len(cov)}", flush=True)
+    cov_m = cov.values
+    # NaN 行在折内残差化时会被 mask 排除 (downstream 已处理)
+
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
 r_df = run_modality(X=Xm, omics_df=om_df, cov=cov_m, modality_name="proteomics",
                     top_k_variance=2000, out_csv=OUT, seed=2026, n_seeds=3,
                     do_permutation=False,

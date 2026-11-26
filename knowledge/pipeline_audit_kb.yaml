@@ -1,0 +1,427 @@
+# Pipeline-audit checklist (controlled vocabulary + rule set)
+# Companion to: "An auditable five-axis stress-testing framework for pathology
+# foundation-model to bulk-omics association pipelines" (JBI submission).
+#
+# What this is: a controlled vocabulary + rule set for auditing an association
+# pipeline of this class. Every entry restates content already in the manuscript
+# (sections named in `source`), so the checklist can be evaluated mechanically
+# instead of by reading prose. Each check declared below is executed as code by
+# scripts/_kb_rule_check.py, which writes the per-check verdict table
+# papers/Journal of Biomedical Informatics/supplementary/
+# S5_checklist_decidability.csv (see the `decidability` block). That makes the
+# file executable, not an ontology: terms are flat, there is no inference layer,
+# no class hierarchy, and no cross-ontology alignment. The manuscript does not
+# present it as a knowledge-representation contribution (§8: the argument does
+# not depend on it). The study's only use of existing biomedical ontologies is
+# the GO/KEGG over-representation check (manuscript §6.13, Note N5), which
+# consumes existing public vocabularies as convergent-validity evidence and
+# decides nothing.
+#
+# Conventions:
+#   status:     observed | excluded | precondition | boundary
+#   evidence:   released result table the number was read from
+#   check_kind: column_check | switch | log_echo | practice
+#     column_check / switch / log_echo -> dischargeable against run output
+#     practice                         -> procedural discipline, not machine-checked
+
+schema_version: "1.0"
+artifact_id: pipeline_audit_kb
+title: Five-axis stress-test audit checklist for FM-to-bulk-omics association pipelines
+source_publication: papers/Journal of Biomedical Informatics/manuscript.md
+source_sections: ["§5.4", "§5.5", "§5.5b", "§5.6", "§6.9", "§8", "§9"]
+
+scope:
+  pipeline_class: >-
+    pathology foundation-model (FM) whole-slide features associated with bulk
+    omics targets (protein abundance, phosphosite occupancy, RNA expression)
+    under cross-validation with multiple-testing correction.
+  precondition:
+    id: switches_exposed
+    status: precondition
+    statement: >-
+      The pipeline exposes its configuration as re-runnable options for all five
+      axes below. A pipeline that hides any of them cannot be audited by this
+      framework; absence of the switches is reported as out-of-scope, not as a
+      pass.
+    source: ["§1 contribution 1", "§5.4", "§7 limitation xvii"]
+  out_of_scope:
+    - id: black_box_pipelines
+      status: boundary
+      statement: closed implementations that cannot be re-run with a switched axis.
+    - id: encoder_quality
+      status: boundary
+      statement: >-
+        The framework audits association pipelines, not encoders. No claim here
+        depends on the encoder (DINOv2 ViT-L/14 here) being the best available.
+    - id: leakage_audit
+      status: boundary
+      statement: >-
+        Train/test split integrity is a separate, orthogonal audit tradition
+        (manuscript §2.2); this artifact assumes patient-level folds by
+        construction and does not re-check them.
+
+axes:
+  - id: axis_1
+    name: statistical_protocol
+    question: How is the association tested?
+    switches: [fold_level_mean_r_with_t_test, pooled_out_of_fold_exact_test]
+    holds_fixed: [features, covariates, dictionary, targets, folds]
+    reference: ["§5.4", "§6.5"]
+    expected_reading: >-
+      Fold-level summaries are dependent statistics; pooled out-of-fold exact
+      testing is the reportable convention.
+    observed_effect:
+      cohort: NSCLC (own earlier feature snapshot, internal audit)
+      fold_level_hits: 40
+      pooled_exact_hits: 5
+      non_replicating_fraction: 0.50
+      sign_reversed_fraction: 0.57
+      caveat: >-
+        Illustrative internal audit case, not a reproducible external benchmark
+        (§7 limitation ix).
+    evidence: results_vitl14_jbi_r3/
+    evidence_note: audit snapshot of our own earlier feature set; summarized in Table 1
+    failure_mode: F1
+
+  - id: axis_2
+    name: covariate_escalation
+    question: What is adjusted away before testing?
+    switches: [none, age_sex, age_sex_subtype, pathologist_composition_fractions]
+    holds_fixed: [features, dictionary, targets, folds, testing_protocol]
+    reference: ["§5.3", "§5.4", "§6.1", "§6.7"]
+    expected_reading: >-
+      Signal lost under escalation is composition confounding, not signal loss of
+      technical origin.
+    observed_effect:
+      - cohort: NSCLC protein (n = 203, 2000 targets)
+        positive_direction_hits: [100, 83, 3]
+        escalation_path: [none, age+sex, +subtype]
+        attenuation_pct: 97
+      - cohort: PDA protein (three-run attribution design)
+        positive_direction_hits: [17, 13, 6]
+        tested_targets: [755, 820, 1106]
+        sample_size_attrition_pct: -24
+        composition_absorption_pct: -54
+    evidence:
+      - results_vitl14_jbi_r4st_local/dn_frozen_{nocov,cov,covsub}/
+      - results_vitl14_jbi_r4/dn_r4_pda_{nocov,ccnocov,cov}/
+    failure_mode: [F2, F3]
+
+  - id: axis_3
+    name: dictionary_source
+    question: Where does the unsupervised representation come from?
+    switches: [transductive_fit_on_target_cohort, frozen_transferred_from_TCGA]
+    holds_fixed: [features_elsewhere, covariates, targets, folds, testing_protocol]
+    reference: ["§5.1", "§5.4", "§6.2", "§6.11"]
+    expected_reading: >-
+      Both arms are unsupervised (no label leakage); the axis measures
+      preprocessing fragility, not leakage.
+    observed_effect:
+      cohort: NSCLC protein (no-covariate endpoint, 2000 targets)
+      transductive_hits: 5
+      frozen_hits: 100
+      swing: 20-fold
+      shared_hits: 2
+    evidence:
+      - results_vitl14_jbi_r4st_local/dn_trans_nocov/
+      - results_vitl14_jbi_r4st_local/dn_frozen_nocov/
+    size_extension:
+      reference: ["§5.5b", "§6.11", "Note N3"]
+      grid: [5, 8, 10, 15, 20]
+      cohort: CPTAC-UCEC (n = 46, structure-consistent features)
+      full_feature_hits: [3, 8, 12, 7, 13]
+      only_translation_hits: [0, 10, 12, 8, 7]
+      feature_dimensionality_range: [50, 460]
+      distinct_targets_across_grid: 58
+      singleton_targets: 41
+      max_recurring_cell_count: 4
+      note: >-
+        Absolute counts are not comparable with the 230-d set (§7 limitation x);
+        only the k-ordering is interpretable.
+    evidence_size_extension: results_vitl14_jbi_pancancer/p2_ksens/
+    failure_mode: null
+
+  - id: axis_4
+    name: feature_type
+    question: Which representation is fed to the test?
+    switches: [spatial_ecological_230d, global_mean_pooled_embedding_1024d]
+    holds_fixed: [covariates, dictionary, targets, folds, testing_protocol]
+    reference: ["§5.4", "§6.4", "§6.7"]
+    expected_reading: >-
+      Pooled features cannot encode arrangement, so a pooled >= spatial ordering
+      licenses a composition-readout interpretation and withholds an
+      arrangement-level claim (rule R3).
+    observed_effect:
+      - cohort: NSCLC protein, age+sex adjusted (2000 targets)
+        pooled_hits: 190
+        spatial_hits: 83
+        subtype_adjusted: {pooled: 9, spatial: 3, intersection: [SLPI]}
+      - cohort: PDA protein, complete-case no-covariate (n = 65)
+        pooled_hits: 36
+        spatial_hits: 13
+        tested_targets: {pooled: 1197, spatial: 820}
+      - cohort: PDA protein, composition-adjusted (n = 65)
+        pooled_hits: 19
+        spatial_hits: 6
+        tested_targets: {pooled: 1016, spatial: 1106}
+    evidence:
+      - results_vitl14_jbi_r4/dn_r4_baseline_cov/
+      - results_vitl14_jbi_r4/dn_r4_frozen_cov/
+      - results_vitl14_jbi_r4/dn_r4_pda_baseline_{ccnocov,cov}/
+    failure_mode: F4
+
+  - id: axis_5
+    name: outcome_platform
+    question: What is the outcome measured on?
+    switches: [cptac_protein, cptac_phosphosite, cptac_rna, tcga_wsi_rna]
+    holds_fixed: [features, covariates, dictionary, folds, testing_protocol]
+    reference: ["§5.4", "§6.3", "§6.12"]
+    expected_reading: >-
+      Modality contrasts are themselves completeness- and test-count-dependent;
+      report them as power-bounded observations, never as platform rankings.
+    observed_effect:
+      - cohort: NSCLC (203)
+        protein_pos_no_cov_to_cov: [100, 83]
+        rna_pos_no_cov_to_cov: [63, 55]
+        rna_screen_size: 500
+        phospho_hits: 0
+        phospho_median_n_valid: 43
+        caveat: RNA set has higher completeness (median n 197 vs 149); observation pending matched-target sensitivity.
+      - cohort: TCGA-KIRC (n = 31, RNA)
+        any_sign: {full: 7, no_trans: 100, only_trans: 6, shuffle: 99}
+        positive_direction: {full: 2, no_trans: 12, only_trans: 2, shuffle: 13}
+      - cohort: TCGA-HNSC (n = 24, RNA)
+        any_sign: {full: 0, no_trans: 2, only_trans: 4, shuffle: 4}
+    evidence:
+      - results_vitl14_jbi_r4/dn_r4_frozen_cov_rna500/
+      - results_vitl14_jbi_r4/dn_r4_frozen_cov_phospho500/
+      - results_vitl14_jbi_pancancer/p1_tcga_rna/
+    failure_mode: null
+
+null_controls:
+  - id: null_patient_shuffle
+    name: patient_shuffle
+    bounds: all five axes
+    operation: feature vectors permuted across patients (destroys all biological pairing)
+    reference: ["§5.4", "§6.5", "§6.10"]
+    expected: hit counts at the multiple-testing floor
+    observed:
+      - {cohort: NSCLC protein age+sex, hits: 1, tested: 2000, empirical_fdr: 0.0005, note: single hit at n = 22, flagged by the n < 50 rule}
+      - {cohort: UCEC protein, hits: 7, tested: 2000}
+      - {cohort: GBM protein, hits: 1, tested: 2000}
+    evidence:
+      - results_vitl14_jbi_r4st_local/dn_caseshuffle_cov/
+      - results_vitl14_jbi_pancancer/ablation/ucec_shuffle/
+      - results_vitl14_jbi_pancancer/ablation/gbm_shuffle/
+    recomputable_from_release: true
+  - id: null_spatial_permutation
+    name: within_slide_spatial_permutation
+    bounds: all five axes
+    operation: >-
+      within each slide, niche probability rows permuted in sync with
+      assignments (composition invariant, arrangement destroyed)
+    reference: ["§5.4", "§6.6", "§6.7"]
+    expected: composition-driven hits persist; arrangement-specific hits vanish
+    observed:
+      - cohort: NSCLC protein age+sex
+        permutation_hits_any_sign: 48
+        permutation_hits_positive: 47
+        main_analysis_hits_positive: 83
+        persist_composition_driven: 29
+        vanish_arrangement_candidates: 54
+        permutation_only: 18
+        caveat: run at age+sex only; the subtype-adjusted classification inherits that permissiveness (§7 limitation xii).
+      - {cohort: PDA composition-adjusted, permutation_hits: 0, tested: 1070, reading: every adjusted survivor is arrangement-specific}
+    evidence:
+      - results_vitl14_jbi_r4/dn_r4_shuffro_cov/
+      - results_vitl14_jbi_r4/dn_r4_pda_shuffro/
+    recomputable_from_release: false
+    requires: per-slide frozen-dictionary niche label maps (not redistributed; regenerate with src/run_cptac.py)
+
+failure_modes:
+  - id: F1
+    name: invalid_fold_level_statistics
+    layer: statistics
+    status: observed
+    description: mean fold r + t-test on dependent per-fold summaries
+    symptom: plausible hit list with no error
+    detection_predicate: report pooled out-of-fold predictions, not fold summaries
+    detection_check:
+      kind: column_check
+      detail: >-
+        a released per-target table must carry pooled r (r_pooled) and its p/q;
+        a table carrying only fold-level means and stds cannot support a
+        published hit count.
+    linked_rule: R1
+    linked_axis: axis_1
+    quantified: {non_replicating: 0.50, sign_reversed: 0.57}
+  - id: F2
+    name: nan_poisoned_covariate_matrix
+    layer: statistics
+    status: observed
+    description: NaNs in the covariate matrix silently disable residualization
+    detection_predicate: assert covariate non-null rates per run
+    detection_check: {kind: log_echo, detail: echo per-covariate non-null counts before the first fit}
+    linked_rule: R5
+    linked_axis: axis_2
+  - id: F3
+    name: inert_configuration_flag
+    layer: statistics
+    status: observed
+    description: CLI flag accepted but never applied (covariate adjustment no-op)
+    symptom: >-
+      "subtype-adjusted pooled" run was an age+sex run carrying a subtype label;
+      181 positive hits unpinned vs 9 after repair (209 targets crossing,
+      largest single change in r 0.67)
+    detection_predicate: grep the effective covariate count from run logs
+    detection_check: {kind: log_echo, detail: echo effective_covariates=<k> per run and diff it against the requested flags}
+    linked_rule: R5
+    linked_axis: axis_2
+  - id: F4
+    name: feature_file_mismatch
+    layer: compute
+    status: observed
+    description: batch tasks silently read different feature matrices
+    detection_predicate: MD5-pin and echo the feature file per task
+    detection_check: {kind: practice, detail: pin the feature CSV path + digest in the launcher and echo it per task}
+    linked_rule: R5
+    linked_axis: axis_4
+  - id: F5
+    name: multithread_nondeterminism
+    layer: compute
+    status: excluded
+    observed_in_this_study: false
+    description: >-
+      BLAS threading non-determinism mistaken for a configuration effect. This is
+      a hypothesized-and-excluded entry, not an instance: the taxonomy is six
+      entries wide but only five are defects found here.
+    symptom: >-
+      four duplicated NSCLC configurations: three reproduce exactly (max
+      per-target change in r 3e-14, no target crossing q = 0.05); the fourth's
+      181-vs-9 gap was F3, not threads.
+    detection_predicate: >-
+      duplicate one configuration pinned vs unpinned before trusting a count;
+      gaps larger than floating-point noise are configuration changes
+    detection_check: {kind: practice, detail: re-run one configuration with OPENBLAS/OMP/MKL/NUMEXPR = 1 and diff result vectors}
+    linked_rule: R5
+    linked_axis: null
+  - id: F6
+    name: branch_logic_noop
+    layer: statistics
+    status: observed
+    description: covariate matrix accepted by the survival entry point but never read
+    symptom: supposedly distinct configurations return bit-identical vectors
+    detection_predicate: cross-run result-diff alarms; identical outputs across different configurations are a defect, not a success
+    detection_check: {kind: column_check, detail: diff per-target vectors between two configurations that must differ}
+    linked_rule: R5
+    linked_axis: axis_2
+
+reporting_rules:
+  - id: R1
+    name: configuration_completeness
+    requires: [no_covariate_configuration, fully_adjusted_configuration, patient_shuffle_null]
+    gate: lists reported without these are unauditable
+    executable_check:
+      kind: column_check
+      detail: >-
+        the released tables for one cohort must include all three
+        configurations, each with r_pooled and q_value columns.
+    implemented_in_code: >-
+      yes (C1 - the required columns are present and every Table 1 hit count for the
+      screen is re-derived from the released CSV; 47 of 47 pass)
+  - id: R2
+    name: composition_readout
+    condition: survives covariate escalation but not within-slide permutation
+    conclusion: composition readout; no arrangement-level biological claim
+    executable_check: {kind: column_check, detail: intersect survivor sets of the adjusted run and the permutation run}
+    implemented_in_code: >-
+      yes (C4 - survivor-set intersection of the released adjusted and permutation
+      runs; NSCLC 83 adjusted ; 47 permutation ; 29 joint, PDA 6 ; 0 ; 0)
+  - id: R3
+    name: arrangement_specific_signal
+    requires: [joint survival of within-slide permutation, feature-type contrast at matched n]
+    confidence_rule: inherits the confidence level of the smallest cohort in the chain
+    direction_note: >-
+      currently direction-agnostic; the framework has no sign-stability
+      criterion (§7 limitation xiii).
+    executable_check: {kind: column_check, detail: spatial survivor absent or weaker under pooled features at matched n}
+    implemented_in_code: >-
+      yes (C5 - spatial-vs-pooled intersection at matched n; NSCLC 386 matched
+      targets ; 68 shared survivors ; max |dr| 1.065, PDA at n = 65 352 ; 12 ; 1.123)
+  - id: R4
+    name: platform_and_cohort_boundary
+    triggers: [outcome platform is RNA-seq, cohort is histologically homogeneous, n < 50]
+    requires: comparison against the shuffle null before any biological interpretation
+    conclusion: counts at the nominal FDR floor indicate noise, not signal
+    executable_check: {kind: column_check, detail: compare hit counts of each configuration against its own shuffle arm}
+    implemented_in_code: >-
+      yes (C3 - 25 non-null arms each against its own shuffle arm; 5
+      signal_above_null, 16 at_or_above_own_null, 4 no_hits_in_arm - the latter two
+      verdicts are R4's conclusion for that arm, not a pipeline defect)
+  - id: R5
+    name: pipeline_integrity
+    requires: [pooled out-of-fold statistics, covariate non-null assertions, effective-configuration echo, feature-file pinning, thread pinning for reported numbers, cross-run result-diff alarms]
+    gate: the six failure modes above are release-blocking checks
+    executable_check:
+      kind: log_echo
+      detail: >-
+        the effective-covariate echo (F3/F2), the feature-file digest echo (F4)
+        and the launcher-level thread pinning are run-log assertions, not columns
+        of a released table; the pooled-statistics, switch-inertness and
+        cross-run-diff items of this rule are discharged against released columns
+        (C2, C6, C7).
+    implemented_in_code: >-
+      partial. Discharged now: F1 (C2, 44 of 47 screens carry a usable pooled p;
+      the other 3 are reported not_dischargeable), F3/F6 (C6 - the covariate
+      switch changes both counts and survivor identity), F5 (C7 - all four
+      pinned/unpinned pairs, 3 bit-identical to 2.7e-14, 1 attributed to F3).
+      Not discharged from tables (C8, kind log_echo): the covariate non-null-rate
+      echo and the launcher-level pinning/file-digest assertions stay run-log
+      practice.
+
+decidability:
+  statement: >-
+    Every check declared below is evaluated as code against the released
+    per-target tables, so this file is an executable checklist rather than an
+    advisory one. The vocabulary is finite (5 axes, 14 declared switch values, 2
+    nulls, 6 failure predicates, 5 rules, 5 class terms) and the predicates
+    compare columns and run logs, not prose.
+  executed_by: scripts/_kb_rule_check.py
+  verdict_table: papers/Journal of Biomedical Informatics/supplementary/S5_checklist_decidability.csv
+  observed_run: >-
+    130 verdict rows over 47 released screens across 6 cohorts (GBM, HNSC, KIRC,
+    NSCLC, PDA, UCEC): 97 pass, 0 flag, 16 at_or_above_own_null, 5
+    signal_above_null, 4 no_hits_in_arm, 3 excluded_not_observed, 1
+    configuration_change_not_threading, 4 not dischargeable from a released
+    column. The script exits non-zero on any flag. Narration in Note N7.
+  checks:
+    C1: R1 schema + Table 1 reproduction (47 screens, all counts re-derived)
+    C2: F1 provenance of the released q (pooled BH reproduces each released hit set; the fold-mean counterfactual does not)
+    C3: R4 each arm against its own patient-shuffle null (25 arms)
+    C4: R2 adjusted x permutation survivor intersection
+    C5: R3 spatial vs pooled at matched n
+    C6: F3/F6 the covariate switch is not inert (counts and survivor identity)
+    C7: F5 pinned vs unpinned duplicate configurations
+    C8: items whose evidence is a run log or launcher setting, recorded as not dischargeable from tables
+  not_a_claim: >-
+    Being decidable does not make this an ontology, and no result in the
+    manuscript depends on it: the checks re-derive numbers already printed in
+    Table 1, §6.6, §6.9 and Notes N1-N4.
+
+classification_vocabulary:
+  - id: composition_readout
+    definition: association explained by tissue composition carried by the features; survives escalation, not permutation (R2).
+  - id: arrangement_specific
+    definition: association surviving within-slide permutation and the feature-type contrast (R3).
+  - id: platform_or_cohort_artifact
+    definition: association indistinguishable from the shuffle null or at the nominal FDR floor for the cohort/platform (R4).
+  - id: low_confidence_small_n
+    definition: survivor with valid-sample n below the pre-specified 50-sample floor.
+  - id: excluded_hypothesis
+    definition: failure mode hypothesized, tested by duplication, and not observed (F5).
+
+cost_model:
+  statement: >-
+    Adopting R1-R5 costs a fixed multiplier of existing compute (2-4 runs per
+    configuration in this study) and no new data or instrumentation.
+  reference: ["§8", "Statement of Significance"]

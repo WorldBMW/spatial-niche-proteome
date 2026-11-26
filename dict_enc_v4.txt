@@ -1,0 +1,117 @@
+﻿[config] 找到 TCGA WSI: G:\ai_paper\experiment2_fm_time\data\raw\TCGA\svs  (130 .svs)
+[targets] 9 个: ['TMB_high', 'ALK', 'BRAF', 'EGFR', 'KEAP1', 'KRAS', 'MET', 'PIK3CA', 'TP53']
+
+============================================================
+[Backbone] dinov2_vitl14
+============================================================
+[mapping] 149 GDC UUID → TCGA IDs
+[embed] 加载缓存: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_dinov2_vitl14.npz
+
+--- dinov2_vitl14 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  命中数 (p<0.05): 0/9
+  target   n    auc  p_perm  significant
+TMB_high 143 0.3905     1.0        False
+     ALK 143 0.9048     1.0        False
+    BRAF 143 0.2584     1.0        False
+    EGFR 143 0.5749     1.0        False
+   KEAP1 143 0.5622     1.0        False
+    KRAS 143 0.5568     1.0        False
+     MET 143 0.7311     1.0        False
+  PIK3CA 143 0.6451     1.0        False
+    TP53 143 0.6594     1.0        False
+
+--- dinov2_vitl14 seed=2027 ---
+[kmeans seed=2027] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  命中数 (p<0.05): 0/9
+  target   n    auc  p_perm  significant
+TMB_high 143 0.3782     1.0        False
+     ALK 143 0.8929     1.0        False
+    BRAF 143 0.2507     1.0        False
+    EGFR 143 0.5689     1.0        False
+   KEAP1 143 0.5648     1.0        False
+    KRAS 143 0.5543     1.0        False
+     MET 143 0.7285     1.0        False
+  PIK3CA 143 0.6438     1.0        False
+    TP53 143 0.6554     1.0        False
+
+--- dinov2_vitl14 seed=2028 ---
+[kmeans seed=2028] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  命中数 (p<0.05): 0/9
+  target   n    auc  p_perm  significant
+TMB_high 143 0.3775     1.0        False
+     ALK 143 0.8929     1.0        False
+    BRAF 143 0.2387     1.0        False
+    EGFR 143 0.5700     1.0        False
+   KEAP1 143 0.5611     1.0        False
+    KRAS 143 0.5556     1.0        False
+     MET 143 0.7357     1.0        False
+  PIK3CA 143 0.6429     1.0        False
+    TP53 143 0.6515     1.0        False
+
+============================================================
+[Backbone] resnet50
+============================================================
+[mapping] 149 GDC UUID → TCGA IDs
+[embed] 加载缓存: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_resnet50.npz
+
+--- resnet50 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  命中数 (p<0.05): 0/9
+  target   n    auc  p_perm  significant
+TMB_high 143 0.4192     1.0        False
+     ALK 143 0.7143     1.0        False
+    BRAF 143 0.3715     1.0        False
+    EGFR 143 0.6050     1.0        False
+   KEAP1 143 0.6468     1.0        False
+    KRAS 143 0.2877     1.0        False
+     MET 143 0.7556     1.0        False
+  PIK3CA 143 0.5765     1.0        False
+    TP53 143 0.4760     1.0        False
+
+--- resnet50 seed=2027 ---
+[kmeans seed=2027] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  命中数 (p<0.05): 0/9
+  target   n    auc  p_perm  significant
+TMB_high 143 0.4203     1.0        False
+     ALK 143 0.7619     1.0        False
+    BRAF 143 0.3545     1.0        False
+    EGFR 143 0.5964     1.0        False
+   KEAP1 143 0.6362     1.0        False
+    KRAS 143 0.2938     1.0        False
+     MET 143 0.7556     1.0        False
+  PIK3CA 143 0.5676     1.0        False
+    TP53 143 0.4746     1.0        False
+
+--- resnet50 seed=2028 ---
+[kmeans seed=2028] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  命中数 (p<0.05): 0/9
+  target   n    auc  p_perm  significant
+TMB_high 143 0.4183     1.0        False
+     ALK 143 0.7500     1.0        False
+    BRAF 143 0.3593     1.0        False
+    EGFR 143 0.6062     1.0        False
+   KEAP1 143 0.6475     1.0        False
+    KRAS 143 0.2938     1.0        False
+     MET 143 0.7508     1.0        False
+  PIK3CA 143 0.5837     1.0        False
+    TP53 143 0.4724     1.0        False
+
+============================================================
+字典/编码器敏感性汇总
+============================================================
+     backbone  seed  n_hits
+dinov2_vitl14  2026       0
+dinov2_vitl14  2027       0
+dinov2_vitl14  2028       0
+     resnet50  2026       0
+     resnet50  2027       0
+     resnet50  2028       0
+
+结果保存到: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity

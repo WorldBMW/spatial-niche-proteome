@@ -1,7 +1,7 @@
 """
 downstream_omics.py —— 形态学特征 → CPTAC 多组学连续标签回归
 
-核心目标: 量化 262 维空间生态特征 (niche abundance + Ripley K + 界面 + 纤维化 + 多样性 + 拓扑)
+核心目标: 量化 230 维空间生态特征 (niche abundance + Ripley K + 界面 + 纤维化 + 多样性 + 拓扑)
          对蛋白质组/磷酸化蛋白质组/转录组的预测力, 并识别关键生态特征。
 
 方法学 (解决旧版 downstream.py 的 8 项硬伤):
@@ -16,7 +16,7 @@ downstream_omics.py —— 形态学特征 → CPTAC 多组学连续标签回归
 
 输入:
   - features_omics_aligned.csv (run_cptac.py --step align 输出)
-    列: case_id, cohort(C3L-/C3N-), 262 维形态特征
+    列: case_id, cohort(C3L-/C3N-), 230 维形态特征
   - CPTAC omics 11 csv (data/raw/CPTAC/omics/)
 
 用法:
@@ -94,44 +94,51 @@ def robust_read_csv(fp: str | Path) -> pd.DataFrame:
 
 
 def load_cptac_omics(omics_dir: str | Path = None,
-                     modalities: list[str] | None = None) -> dict[str, pd.DataFrame]:
+                     modalities: list[str] | None = None,
+                     cohort: str = "ALL") -> dict[str, pd.DataFrame]:
     """
-    加载 CPTAC-LUAD/LUSC 多组学数据, 返回 dict:
+    加载 CPTAC 多组学数据, 返回 dict:
       {
         "proteomics":        df (patient_id × 基因),
         "phosphoproteomics": df (patient_id × 基因|位点|肽|ensembl),
         "transcriptomics":   df (patient_id × 基因),
-        "clinical_luad":     df,
-        "clinical_lusc":     df,
+        "clinical":          df,
         "somatic_mutation":  df,
         "roster":            df,
       }
+    cohort: ALL=luad+lusc, 或指定癌种 (luad/lusc/ucec/gbm)
     """
     d = Path(omics_dir) if omics_dir else config.DATA_RAW / "CPTAC" / "omics"
     assert d.exists(), f"omics 目录不存在: {d}"
+
+    # 确定要加载的 cohort 列表
+    if cohort.upper() == "ALL":
+        cohorts_to_load = ["luad", "lusc"]
+    else:
+        cohorts_to_load = [cohort.lower()]
 
     omics = {}
     # 只加载指定模态 (避免一次性加载全部 180k+ 列挤爆内存)
     omics_names = modalities if modalities else ["proteomics", "phosphoproteomics", "transcriptomics"]
     for name in omics_names:
         parts = []
-        for cohort in ["luad", "lusc"]:
-            fp = d / f"{cohort}_{name}.csv"
+        for coh in cohorts_to_load:
+            fp = d / f"{coh}_{name}.csv"
             if fp.exists():
                 df = robust_read_csv(fp)
-                df["_cohort"] = cohort.upper()
+                df["_cohort"] = coh.upper()
                 parts.append(df)
         if parts:
-            # join='outer' 取列名并集, 因为 LUAD/LUSC 蛋白名有重叠
+            # join='outer' 取列名并集
             omics[name] = pd.concat(parts, ignore_index=True, join="outer")
 
     for name in ["clinical", "somatic_mutation"]:
         parts = []
-        for cohort in ["luad", "lusc"]:
-            fp = d / f"{cohort}_{name}.csv"
+        for coh in cohorts_to_load:
+            fp = d / f"{coh}_{name}.csv"
             if fp.exists():
                 df = robust_read_csv(fp)
-                df["_cohort"] = cohort.upper()
+                df["_cohort"] = coh.upper()
                 parts.append(df)
         if parts:
             omics[name] = pd.concat(parts, ignore_index=True, join="outer")
@@ -184,7 +191,7 @@ def unify_patient_ids(omics: dict[str, pd.DataFrame],
 def load_morphology_features(features_csv: str | Path,
                              mock: bool = False,
                              n_samples: int = 200,
-                             n_features: int = 262,
+                             n_features: int = 230,
                              real_roster: pd.DataFrame | None = None) -> pd.DataFrame:
     """
     加载形态特征 CSV。
@@ -225,18 +232,67 @@ def load_morphology_features(features_csv: str | Path,
 
 
 def build_morphology_matrix(feat_df: pd.DataFrame,
-                             omit_cols: list[str] | None = None) -> np.ndarray:
-    """从 features DataFrame 抽出形态特征矩阵 (只保留数值列, 自动排除字符串列)。"""
+                             omit_cols: list[str] | None = None,
+                             feature_subset: str = "full",
+                             shuffle_trans: bool = False) -> tuple[np.ndarray, list[str]]:
+    """从 features DataFrame 抽出形态特征矩阵。
+
+    feature_subset:
+      - full: 全部形态特征
+      - no-trans: 去掉 trans_* (100维拓扑转移)
+      - only-trans: 仅 trans_*
+      - only-abund: 仅 abund_*
+      - only-ripley: 仅 ripley_*
+      - matched-dim: 随机选 100 维非 trans 特征 (排除维度数混淆)
+      - only-corr: 仅 corr_*
+    shuffle_trans: 把 trans_{k}_{l} 替换为 abund_k * abund_l (空间独立性零假设基线)
+    """
     omit = set(omit_cols or ["case_id", "cohort", "_cohort"])
     # 额外排除非数值列 (has_*, in_tcia_*, 等 omics 对齐标志)
     feat_cols = []
     for c in feat_df.columns:
         if c in omit: continue
-        # 只保留数值类型
         if pd.api.types.is_numeric_dtype(feat_df[c]):
             feat_cols.append(c)
     if not feat_cols:
         raise ValueError(f"无有效数值特征列! omit={omit}, cols={feat_df.columns.tolist()[:10]}")
+
+    # 按类别筛选
+    if feature_subset != "full":
+        if feature_subset == "no-trans":
+            feat_cols = [c for c in feat_cols if not c.startswith("trans_")]
+        elif feature_subset == "only-trans":
+            feat_cols = [c for c in feat_cols if c.startswith("trans_")]
+        elif feature_subset == "only-abund":
+            feat_cols = [c for c in feat_cols if c.startswith("abund_")]
+        elif feature_subset == "only-ripley":
+            feat_cols = [c for c in feat_cols if c.startswith("ripley_")]
+        elif feature_subset == "only-corr":
+            feat_cols = [c for c in feat_cols if c.startswith("corr_")]
+        elif feature_subset == "matched-dim":
+            # 随机选 100 维非 trans 特征 (固定种子保证可复现)
+            rng = np.random.RandomState(42)
+            non_trans = [c for c in feat_cols if not c.startswith("trans_")]
+            n_pick = min(100, len(non_trans))
+            feat_cols = list(rng.choice(non_trans, size=n_pick, replace=False))
+        else:
+            raise ValueError(f"未知 feature_subset: {feature_subset}")
+        print(f"[feature_subset={feature_subset}] 选中 {len(feat_cols)} 个特征")
+
+    # shuffle-trans 零假设: trans_{k,l} = abund_k * abund_l
+    if shuffle_trans:
+        print("[shuffle-trans] 用 abund_k * abund_l 替换 trans 矩阵 (空间独立性零假设)")
+        abund_cols = sorted([c for c in feat_df.columns if c.startswith("abund_")],
+                            key=lambda x: int(x.split("_")[1]))
+        trans_cols = [c for c in feat_cols if c.startswith("trans_")]
+        if trans_cols and len(abund_cols) == 10:
+            abund = feat_df[abund_cols].values  # (N, 10)
+            # 构造 trans_{k,l} = abund[:, k] * abund[:, l]
+            for tc in trans_cols:
+                parts = tc.split("_")
+                k, l = int(parts[1]), int(parts[2])
+                feat_df[tc] = abund[:, k] * abund[:, l]
+
     return feat_df[feat_cols].values.astype(float), feat_cols
 
 
@@ -305,6 +361,15 @@ def build_covariates(clinical_df: pd.DataFrame,
 
     print(f"[covariates] 可用协变量: {list(out.columns)}, 非空率: "
           f"{out.notna().mean().round(3).to_dict()}")
+    # 丢弃非空率 <95% 的协变量列 (全空/高缺失列会让 residualize 的逐行 NaN mask
+    # 把所有样本排除, 导致残差化静默失效 — 2026-10-16 修复)
+    keep = [c2 for c2 in out.columns if out[c2].notna().mean() >= 0.95]
+    dropped = [c2 for c2 in out.columns if c2 not in keep]
+    if dropped:
+        print(f"[covariates] 丢弃高缺失列 (非空率<95%): {dropped}")
+        out = out[keep]
+    if out.empty:
+        print("[covariates] 无可用协变量, 后续分析不做协变量调整")
     return out
 
 
@@ -375,6 +440,26 @@ def residualize_fit_transform(Y_tr: np.ndarray, Y_va: np.ndarray,
     return _transform(Y_tr, cov_tr), _transform(Y_va, cov_va)
 
 
+def residualize_y_fit_transform(y_tr: np.ndarray, y_va: np.ndarray,
+                                cov_tr: np.ndarray, cov_va: np.ndarray):
+    """
+    fold 内对 y 做协变量残差化 (2026-10-16 新增: 之前只残差化 X, 亚型/临床调整不完整)。
+    训练折拟合 y~cov 线性回归, 训练/验证折都取残差。cov 需无 NaN (build_covariates 已过滤)。
+    """
+    mask_tr = ~np.isnan(y_tr) & ~np.isnan(cov_tr).any(axis=1)
+    if mask_tr.sum() < 10:
+        return y_tr, y_va
+    lr = LinearRegression()
+    lr.fit(cov_tr[mask_tr], y_tr[mask_tr])
+    y_tr_r = y_tr.copy()
+    y_va_r = y_va.copy()
+    ok_tr = ~np.isnan(cov_tr).any(axis=1)
+    ok_va = ~np.isnan(cov_va).any(axis=1)
+    y_tr_r[ok_tr] = y_tr[ok_tr] - lr.predict(cov_tr[ok_tr])
+    y_va_r[ok_va] = y_va[ok_va] - lr.predict(cov_va[ok_va])
+    return y_tr_r, y_va_r
+
+
 def evaluate_enet_nested(X: np.ndarray, y: np.ndarray,
                          n_splits_outer: int = N_SPLITS_OUTER,
                          n_splits_inner: int = N_SPLITS_INNER,
@@ -405,6 +490,8 @@ def evaluate_enet_nested(X: np.ndarray, y: np.ndarray,
     all_pearson, all_r2, all_mae = [], [], []
     best_alphas = []
     n_valid = 0
+    # 聚合折外预测: 每个样本收集其在各 seed 留出折中的预测 (每样本 3 个, 5折x3seed)
+    pred_by_sample: dict[int, list[float]] = {}
 
     for seed in seeds:
         outer = KFold(n_splits=n_splits_outer, shuffle=True, random_state=seed)
@@ -412,10 +499,12 @@ def evaluate_enet_nested(X: np.ndarray, y: np.ndarray,
             X_tr, X_va = X[tr_idx], X[va_idx]
             y_tr, y_va = y[tr_idx], y[va_idx]
 
-            # ---- fold 内协变量残差化 (防泄露) ----
+            # ---- fold 内协变量残差化 (防泄露; X 与 y 都残差化) ----
             if cov is not None and cov.size > 0:
                 X_tr, X_va = residualize_fit_transform(
                     X_tr, X_va, cov[tr_idx], cov[va_idx])
+                y_tr, y_va = residualize_y_fit_transform(
+                    y_tr, y_va, cov[tr_idx], cov[va_idx])
 
             # ---- fold 内标准化 (防泄露) ----
             scaler = StandardScaler()
@@ -463,11 +552,29 @@ def evaluate_enet_nested(X: np.ndarray, y: np.ndarray,
             all_mae.append(mean_absolute_error(y_va, y_pred))
             best_alphas.append(alpha_opt)
             n_valid += 1
+            # 收集本折每个验证样本的预测 (样本级, 跨 seed/折聚合用)
+            for j, vi in enumerate(va_idx):
+                pred_by_sample.setdefault(int(vi), []).append(float(y_pred[j]))
 
     if not all_pearson:
         return {"pearson_mean": np.nan, "pearson_std": np.nan,
                 "r2_mean": np.nan, "r2_std": np.nan,
-                "mae_mean": np.nan, "best_alpha": np.nan, "n_valid": 0}
+                "mae_mean": np.nan, "best_alpha": np.nan, "n_valid": 0,
+                "r_pooled": np.nan, "p_pooled": np.nan, "r2_pooled": np.nan}
+
+    # ---- 聚合折外预测的样本级 pearson (修复版主统计量) ----
+    # 每样本预测跨 seed 平均 → 对 (y, y_pred_pooled) 做单次 pearson, 精确 p (无下溢)
+    r_pooled, p_pooled, r2_pooled = np.nan, np.nan, np.nan
+    if pred_by_sample:
+        idxs = np.array(sorted(pred_by_sample.keys()))
+        if len(idxs) >= 3:
+            y_pool = y[idxs]
+            p_pool = np.array([np.mean(pred_by_sample[i]) for i in idxs])
+            if np.std(p_pool) > 1e-8 and np.std(y_pool) > 1e-8:
+                r_pooled, p_pooled = pearsonr(y_pool, p_pool)
+                ss_res = float(np.sum((y_pool - p_pool) ** 2))
+                ss_tot = float(np.sum((y_pool - np.mean(y_pool)) ** 2))
+                r2_pooled = 1.0 - ss_res / ss_tot if ss_tot > 0 else np.nan
 
     return {
         "pearson_mean": float(np.mean(all_pearson)),
@@ -477,6 +584,9 @@ def evaluate_enet_nested(X: np.ndarray, y: np.ndarray,
         "mae_mean":     float(np.mean(all_mae)),
         "best_alpha":   float(np.median(best_alphas)),
         "n_valid":      n_valid,
+        "r_pooled":     float(r_pooled) if r_pooled == r_pooled else np.nan,
+        "p_pooled":     float(p_pooled) if p_pooled == p_pooled else np.nan,
+        "r2_pooled":    float(r2_pooled) if r2_pooled == r2_pooled else np.nan,
     }
 
 
@@ -653,26 +763,37 @@ def run_single_target(X: np.ndarray, y: np.ndarray,
     ci_lo, ci_hi = bootstrap_ci_regression(X_ok, y_ok, seed=seed)
     # 偏相关
     pr = partial_correlation(X_ok, y_ok, cov_ok)
-    # permutation p-value (或快速 pearson p-value)
+    # permutation p-value (或快速聚合 pearson p-value)
     if do_permutation:
         p_perm = permutation_test(X_ok, y_ok, seed=seed, n_perm=500)
     else:
-        # 快速方案: 用 CV 外 pearson 均值做 t 检验 (不依赖训练集过拟合)
-        r = enet["pearson_mean"]
-        n = int(mask.sum())
-        if n > 2 and not np.isnan(r) and abs(r) < 1.0:
-            from scipy.stats import t as t_dist
-            t_stat = r * np.sqrt((n - 2) / (1 - r**2))
-            p_perm = 2 * (1 - t_dist.cdf(abs(t_stat), df=n - 2))
-        else:
-            p_perm = np.nan
+        # 修复版: 聚合折外预测 (每样本跨 seed 平均) 的精确 pearson p
+        p_perm = enet.get("p_pooled", np.nan)
+        if np.isnan(p_perm):
+            # fallback: 折级均值 r 的 t 检验 (sf 防浮点下溢)
+            r = enet["pearson_mean"]
+            n = int(mask.sum())
+            if n > 2 and not np.isnan(r) and abs(r) < 1.0:
+                from scipy.stats import t as t_dist
+                t_stat = r * np.sqrt((n - 2) / (1 - r**2))
+                p_perm = 2 * t_dist.sf(abs(t_stat), df=n - 2)
+            else:
+                p_perm = np.nan
+
+    # 主统计量: 聚合折外预测的样本级 pearson (无小折伪影); 缺失时回退折级均值
+    r_main = enet.get("r_pooled", np.nan)
+    if np.isnan(r_main):
+        r_main = enet["pearson_mean"]
 
     return {
         "target":       target_name,
         "n_valid":      int(mask.sum()),
-        "pearson":      enet["pearson_mean"],
+        "pearson":      r_main,
         "pearson_std":  enet["pearson_std"],
-        "r2":           enet["r2_mean"],
+        "pearson_fold_mean": enet["pearson_mean"],
+        "r_pooled":     enet.get("r_pooled", np.nan),
+        "r2":           enet.get("r2_pooled", enet["r2_mean"]),
+        "r2_pooled":    enet.get("r2_pooled", np.nan),
         "r2_std":       enet["r2_std"],
         "mae":          enet["mae_mean"],
         "best_alpha":   enet["best_alpha"],
@@ -917,23 +1038,33 @@ def main():
                     help="CPTAC omics 目录 (默认 data/raw/CPTAC/omics)")
     ap.add_argument("--mock", action="store_true",
                     help="用合成特征矩阵跑 sanity check (CPU 友好, 不跑真实嵌入)")
-    ap.add_argument("--cohort", choices=["ALL", "LUAD", "LUSC"], default="ALL",
+    ap.add_argument("--cohort", choices=["ALL", "LUAD", "LUSC", "UCEC", "GBM"], default="ALL",
                     help="分层分析 (默认 ALL)")
     ap.add_argument("--targets-top-k", type=int, default=2000,
                     help="每个模态跑 top k 高方差 target (默认 2000)")
     ap.add_argument("--seeds", type=int, default=N_SEEDS, help="CV 随机种子数")
+    ap.add_argument("--no-cov", action="store_true",
+                    help="跳过协变量调整 (nocov 对照, 协变量轴/字典轴用)")
+    ap.add_argument("--adjust-subtype", action="store_true",
+                    help="把 LUAD/LUSC 亚型作为协变量加入 fold 内残差化")
     ap.add_argument("--modalities", type=str, nargs="+",
                     default=["proteomics", "phosphoproteomics", "transcriptomics"],
                     help="只加载指定模态 (默认全部), 如 --modalities proteomics")
     ap.add_argument("--no-permutation", action="store_true",
                     help="跳过置换检验, 用 scipy pearsonr p-value 做 FDR (快 10x, smoke test 推荐)")
+    ap.add_argument("--feature-subset", type=str, default="full",
+                    choices=["full", "no-trans", "only-trans", "only-abund",
+                             "only-ripley", "only-corr", "matched-dim"],
+                    help="消融实验: 按类别筛选特征 (默认 full)")
+    ap.add_argument("--shuffle-trans", action="store_true",
+                    help="消融实验: 把 trans 矩阵替换为 abund_k*abund_l (空间独立性零假设)")
     ap.add_argument("--out-dir", type=str, default=None)
     args = ap.parse_args()
 
     print(f"\n{'='*70}\n[downstream_omics] features={args.features} cohort={args.cohort} seed={SEED}\n{'='*70}")
 
     # 1. 先加载 omics (mock 模式也需要 roster 拿真实 case_id)
-    omics = load_cptac_omics(args.omics_dir, modalities=args.modalities)
+    omics = load_cptac_omics(args.omics_dir, modalities=args.modalities, cohort=args.cohort)
     omics = unify_patient_ids(omics)
 
     # 2. 加载/生成 features
@@ -948,13 +1079,24 @@ def main():
 
     # 3. features × omics × clinical merge
     case_ids = feat_df["case_id"].astype(str).tolist()
-    X_all, feat_names = build_morphology_matrix(feat_df)
+    X_all, feat_names = build_morphology_matrix(
+        feat_df, feature_subset=args.feature_subset, shuffle_trans=args.shuffle_trans)
     print(f"[merge] features n={len(case_ids)}, omics case_id 类型多样, 各表独立 inner join")
 
     # 4. 协变量
     cov = None
-    if "clinical" in omics:
+    if getattr(args, "no_cov", False):
+        print("[covariates] --no-cov: 跳过协变量调整")
+    elif "clinical" in omics:
         cov = build_covariates(omics["clinical"], case_ids)
+
+    # 4b. 亚型协变量 (LUAD/LUSC): --adjust-subtype 时把 cohort 编码加入协变量, fold 内残差化
+    if getattr(args, "adjust_subtype", False) and cohort_col in feat_df.columns:
+        cov = cov if cov is not None else pd.DataFrame(index=case_ids)
+        sub = (feat_df.set_index("case_id")[cohort_col].astype(str).str.lower()
+               .map({"luad": 0.0, "lusc": 1.0}).rename("subtype"))
+        cov = cov.join(sub, how="left")
+        print(f"[covariates] subtype (LUAD=0/LUSC=1) 加入协变量: 非空 {int(cov['subtype'].notna().sum())}/{len(cov)}")
 
     # 注: 协变量残差化不再在全集上做 —— 已在 evaluate_enet_nested 外层 fold 内完成 (防泄露)
 
@@ -975,7 +1117,7 @@ def main():
         # 对齐样本
         om_df = om_df[om_df["case_id"].isin(case_ids)].reset_index(drop=True)
         n_match = len(om_df)
-        if n_match < 50:
+        if n_match < 30:
             print(f"[{mod}] 与 features 交集仅 {n_match}, 跳过")
             continue
         print(f"\n{'─'*70}\n[{mod}] 交集 {n_match} / {len(case_ids)}\n{'─'*70}")

@@ -1,0 +1,38 @@
+[
+  {
+    "fault": "F1",
+    "status": "PASS",
+    "evidence": "两种协议差异已量化",
+    "detail": "A: r_mean=0.076, p=0.0157, sig=True | B: r=0.085, p=0.0144, sig=True"
+  },
+  {
+    "fault": "F2",
+    "status": "PASS",
+    "evidence": "NaN 未导致残差化静默关闭",
+    "detail": "正常: X_changed=True, r2>0.01比例=0.78 | 重NaN: X_changed=True, mean_r2=0.1061"
+  },
+  {
+    "fault": "F3",
+    "status": "PASS",
+    "evidence": "亚型协变量标志确实改变结果 (非空操作)",
+    "detail": "加入 subtype 后残差矩阵平均差=0.008076, r2变化=0.0080"
+  },
+  {
+    "fault": "F4",
+    "status": "PASS",
+    "evidence": "特征文件 schema 校验可检出错配",
+    "detail": "n_features=237, prefixes_found=['abund_', 'caf_', 'corr_', 'ripley_', 'trans_'], schema_ok=True"
+  },
+  {
+    "fault": "F5",
+    "status": "PASS",
+    "evidence": "单线程确定性已验证 (同seed位级复现)",
+    "detail": "同seed两次: r1=-0.093952, r2=-0.093952, diff=0.00e+00 | 不同seed: r3=-0.076649"
+  },
+  {
+    "fault": "F6",
+    "status": "PASS",
+    "evidence": "no-cov 与 cov 模式行为可区分 (非空操作)",
+    "detail": "no-cov: identity=True, mean_r2=0.000000 | cov: changed=True, mean_r2=0.0816"
+  }
+]

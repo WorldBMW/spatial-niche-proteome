@@ -1,7 +1,9 @@
 # ---- Data (too large for Git; see README for sources) ----
 data/
 *.npy
+*.npz
 *.pkl
+*.pth
 *.svs
 *.tif
 *.tiff
@@ -12,15 +14,48 @@ data/
 *.tar.gz
 *.7z
 
+# ---- Large model checkpoints (must never enter Git) ----
+results/checkpoints/
+**/checkpoints/
+
 # ---- Legacy experiment outputs (superseded by results_vitl14_jbi*) ----
-results/
 results_vitl14/
 results_vitl14_cptac/
 results_vitl14_cptac_full/
 logs_rerun2.log
 
-# ---- Manuscript drafts (pre-submission confidentiality) ----
+# ---- results/ is ignored by default; only small summary CSVs are un-ignored ----
+# (large checkpoints above stay excluded; full matrices live in results_vitl14_jbi*)
+results/*
+!results/spikein_full/
+!results/spikein_shuffle_gradient/
+!results/spikein_smoke/
+!results/spikein_smoke_b08/
+!results/omics/
+!results/bootstrap/
+!results/comparison_summary.csv
+!results/comparison_pivot.csv
+results/omics/*.pkl
+results/**/*.pth
+
+# ---- Manuscript drafts & figures (pre-submission confidentiality / submission artifacts) ----
 papers/
+paper_v3_*.md
+figures/
+
+# ---- Node tooling (manuscript docx generation only, not part of the audit pipeline) ----
+node_modules/
+package*.json
+
+# ---- Scratch logs ----
+*.err
+logs_*.txt
+
+# ---- Scratch / one-off scripts (not part of the released audit pipeline) ----
+_*.py
+_*.js
+scripts/_*.py
+.workbuddy/
 
 # ---- Server access / credentials ----
 _sftp_helper.py
@@ -48,6 +83,9 @@ logs_*.log
 nohup.out
 *_cache/
 .cache/
+fault_test_out.txt
+logs_local_*.txt
+_upload_v2*.log
 
 # ---- OS ----
 Thumbs.db

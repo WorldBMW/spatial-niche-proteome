@@ -1,0 +1,51 @@
+﻿[config] 找到 TCGA WSI: G:\ai_paper\experiment2_fm_time\data\raw\TCGA\svs  (130 .svs)
+[targets] 9 个: ['TMB_high', 'ALK', 'BRAF', 'EGFR', 'KEAP1', 'KRAS', 'MET', 'PIK3CA', 'TP53']
+
+============================================================
+[Backbone] dinov2_vitl14
+============================================================
+[embed] 加载缓存: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_dinov2_vitl14.npz
+
+--- dinov2_vitl14 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  无有效 target
+
+--- dinov2_vitl14 seed=2027 ---
+[kmeans seed=2027] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  无有效 target
+
+--- dinov2_vitl14 seed=2028 ---
+[kmeans seed=2028] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+  无有效 target
+
+============================================================
+[Backbone] resnet50
+============================================================
+[embed] 加载缓存: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_resnet50.npz
+
+--- resnet50 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  无有效 target
+
+--- resnet50 seed=2027 ---
+[kmeans seed=2027] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  无有效 target
+
+--- resnet50 seed=2028 ---
+[kmeans seed=2028] 拟合 29018 patches, 2048 dims
+  features: (147, 70)
+  无有效 target
+
+============================================================
+字典/编码器敏感性汇总
+============================================================
+Empty DataFrame
+Columns: [backbone, seed, n_hits]
+Index: []
+
+结果保存到: G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity

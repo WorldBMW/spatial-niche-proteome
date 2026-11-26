@@ -1,0 +1,40 @@
+﻿[config] 找到 TCGA WSI: G:\ai_paper\experiment2_fm_time\data\raw\TCGA\svs  (130 .svs)
+[targets] 9 个: ['TMB_high', 'ALK', 'BRAF', 'EGFR', 'KEAP1', 'KRAS', 'MET', 'PIK3CA', 'TP53']
+
+============================================================
+[Backbone] dinov2_vitl14
+============================================================
+  [weight] 从本地加载: G:\ai_paper\experiment2_fm_time\data\weights\timm-vit_large_patch14_dinov2.lvd142m\model.safetensors
+  [DINOv2 via timm] vit_large_patch14_dinov2.lvd142m embed_dim=1024
+  [patch_embed] dev=cuda  params=304.4M
+[embed] dinov2_vitl14: 147 WSI, device=cuda, embed_dim=1024
+  [20/147] 1ccd29c1-cf30-4701-9b50-5d34cae2f4b3 (75, 1024), elapsed=57s
+  [40/147] 349e01b0-0c88-4321-839e-0a84edf11a73 (256, 1024), elapsed=128s
+  [60/147] 531d1248-76ae-46a1-8f65-cdecf9bcb0d8 (102, 1024), elapsed=197s
+  [80/147] 7e691df8-8ea6-472c-86bf-504c7ba6983d (165, 1024), elapsed=268s
+  [100/147] a355bad1-bb49-4de5-892b-691ed0022d91 (158, 1024), elapsed=340s
+  [120/147] cb6065de-0fc2-40e6-9609-179dfc54943f (256, 1024), elapsed=405s
+  [140/147] eeab558b-8d1e-4843-861d-dbfb06061758 (234, 1024), elapsed=479s
+[embed] 完成: 147 WSI, 缓存到 G:\ai_paper\experiment2_fm_time\results_dict_encoder_sensitivity\embeddings_dinov2_vitl14.npz, 耗时 513s
+
+--- dinov2_vitl14 seed=2026 ---
+[kmeans seed=2026] 拟合 29018 patches, 1024 dims
+  features: (147, 70)
+python : Traceback (most recent call last):
+At line:15 char:3344
++ ... t2_fm_time; python scripts/dict_encoder_sensitivity.py --backbones di ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "G:\ai_paper\experiment2_fm_time\scripts\dict_encoder_sensitivity.py", line 263, in <module>
+    main()
+  File "G:\ai_paper\experiment2_fm_time\scripts\dict_encoder_sensitivity.py", line 236, in main
+    n_sig = int(res["significant"].sum())
+  File "C:\Users\_bmw\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\frame.py", line 4113, in __
+getitem__
+    indexer = self.columns.get_loc(key)
+  File "C:\Users\_bmw\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\indexes\range.py", line 417
+, in get_loc
+    raise KeyError(key)
+KeyError: 'significant'

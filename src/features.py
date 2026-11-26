@@ -1,16 +1,20 @@
 """
 features.py
 ===========
-从 CANVAS 式 niche 软分配概率 (N_patches, 10) 中提取 262 维空间生态特征。
+从 CANVAS 式 niche 软分配概率 (N_patches, 10) 中提取 230 维空间生态特征。
 
-6 大类:
-  1. 丰度占比        10 维
-  2. Ripley's K/L   20 维
-  3. 界面距离/长度   12 维
-  4. CAF 纤维化评分  10 维
-  5. 多样性/熵       10 维
-  6. 转移概率/拓扑  200 维
-合计 262 维（实际实现见下方）
+7 大类（与 FEATURE_NAMES / extract_one 一致）:
+  1. 丰度占比 abund_*           10 维  (10 个 niche 的相对丰度)
+  2. Ripley's K  ripley_*       40 维  (10 niche × 4 个半径)
+  3. 界面特征    intf_*         11 维
+  4. CAF 评分    caf_*          10 维
+  5. 多样性/熵   div_*          14 维
+  6. 转移概率/拓扑 trans_*     100 维  (10×10 邻接 patch niche 转移计数, 含对角)
+  7. niche 相关  corr_*         45 维  (C(10,2)=45 个两两 Pearson 相关)
+合计 10+40+11+10+14+100+45 = 230 维
+
+注意: 第 7 类是 45 个 niche 概率两两相关, 不是 Moran's I;
+Moran's I 仅用于 §3.4 的独立单基因空间验证, 不进入 230 维特征。
 """
 import sys, os, argparse
 from pathlib import Path
