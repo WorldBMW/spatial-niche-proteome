@@ -6,6 +6,9 @@ version: 1.0.0
 date-released: 2026-11-26
 license: MIT
 repository-code: "https://github.com/WorldBMW/spatial-niche-proteome"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24549953
 abstract: >-
   Executable five-axis audit protocol for pathology foundation-model to bulk-omics
   association pipelines: pooled out-of-fold inference (A1), a covariate ladder (A2),
@@ -24,6 +27,9 @@ authors:
   - family-names: Guo
     given-names: Lang
     corresponding: true
+  - family-names: Yan
+    given-names: Qili
+    corresponding: true
 preferred-citation:
   type: article
   title: "A five-axis stress-testing protocol for morphology-molecule associations: quantitative audit of compositional confounding, preprocessing fragility, and silent failures, demonstrated across four CPTAC cancer cohorts"
@@ -38,5 +44,7 @@ preferred-citation:
       given-names: Zhiping
     - family-names: Guo
       given-names: Lang
+    - family-names: Yan
+      given-names: Qili
   journal: "Briefings in Bioinformatics"
-  note: "Under review. A permanent Zenodo DOI will be added to this file once the archive is minted."
+  note: "Under review. Software archive: https://doi.org/10.5281/zenodo.24549953"
