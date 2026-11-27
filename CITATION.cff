@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite both the software archive and the accompanying manuscript."
-title: "A five-axis stress-testing protocol for morphology-molecule associations: quantitative audit of compositional confounding, preprocessing fragility, and silent failures, demonstrated across four CPTAC cancer cohorts"
+title: "A quantitative audit of compositional confounding, preprocessing fragility and silent failures in morphology–molecule associations, built on a five-axis stress-testing protocol across four CPTAC cancer cohorts"
 type: software
 version: 1.0.0
 date-released: 2026-11-26
@@ -18,21 +18,27 @@ abstract: >-
 authors:
   - family-names: Bai
     given-names: Mingwei
+    email: baimingwei@jm360.cn
   - family-names: Gu
     given-names: Zhengmin
+    email: guzm@cmu1h.com
   - family-names: Zhang
     given-names: Ye
+    email: 13332457636@163.com
   - family-names: Ni
     given-names: Zhiping
+    email: nizhiping@jm360.cn
   - family-names: Guo
     given-names: Lang
     corresponding: true
-  - family-names: Yan
-    given-names: Qili
+    email: guolang1016@symc.edu.cn
+  - family-names: Li
+    given-names: Yanqi
     corresponding: true
+    email: yan_qi_li@126.com
 preferred-citation:
   type: article
-  title: "A five-axis stress-testing protocol for morphology-molecule associations: quantitative audit of compositional confounding, preprocessing fragility, and silent failures, demonstrated across four CPTAC cancer cohorts"
+  title: "A quantitative audit of compositional confounding, preprocessing fragility and silent failures in morphology–molecule associations, built on a five-axis stress-testing protocol across four CPTAC cancer cohorts"
   authors:
     - family-names: Bai
       given-names: Mingwei
@@ -44,7 +50,7 @@ preferred-citation:
       given-names: Zhiping
     - family-names: Guo
       given-names: Lang
-    - family-names: Yan
-      given-names: Qili
+    - family-names: Li
+      given-names: Yanqi
   journal: "Briefings in Bioinformatics"
   note: "Under review. Software archive: https://doi.org/10.5281/zenodo.24549953"
